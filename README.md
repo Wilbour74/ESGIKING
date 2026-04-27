@@ -13,7 +13,7 @@ ESGIKING est une API RESTful développée en Node.js permettant la gestion de re
 1. Clonez le dépôt :
 	```bash
 	git clone <url-du-repo>
-	cd 09-ESGIKING
+	cd server
 	```
 2. Installez les dépendances :
 	```bash
@@ -21,13 +21,7 @@ ESGIKING est une API RESTful développée en Node.js permettant la gestion de re
 	```
 
 ## Configuration
-Créez un fichier `.env` à la racine du projet et renseignez les variables nécessaires (voir `env.utils.ts` pour les variables attendues) :
-
-```
-MONGODB_URI=mongodb://localhost:27017/esgiking
-PORT=3000
-SECRET_KEY=VotreCléSecrète
-```
+Créez un fichier `.env` à la racine du projet et renseignez les variables nécessaires (voir `discord`)
 
 ## Lancement
 Pour démarrer le serveur en mode développement :
