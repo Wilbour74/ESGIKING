@@ -37,4 +37,9 @@ export class SessionService {
             await this.sessionModel.findByIdAndDelete(token);
         }
     }
+
+    async isSessionValid(token: string): Promise<boolean> {
+        const session = await this.getActiveSession(token);
+        return session !== null;
+    }
 }

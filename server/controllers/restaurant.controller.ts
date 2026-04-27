@@ -35,7 +35,12 @@ export class RestaurantController{
     }
 
     async getRestaurants(req: Request, res: Response){
-        return this.restaurantService.fetchRestaurants();
+        try {
+            const restaurants = await this.restaurantService.fetchRestaurants();
+            res.status(200).json({ restaurants });
+        } catch (error) {
+            res.status(500).json({ message: "Error fetching restaurants" });
+        }
     }
 
     buildRouter(): Router {
