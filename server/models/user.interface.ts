@@ -14,6 +14,4 @@ export interface User {
     email: string;
     password: string;
     role: UserRole;
-    adress: string;
-    orders: string[] | Order[];
 }
