@@ -1,3 +1,5 @@
+import { Order } from "./order.interface";
+
 export enum UserRole {
     bigboss = 0,
     admin = 1,
@@ -11,5 +13,7 @@ export interface User {
     nickname: string;
     email: string;
     password: string;
-    role: UserRole
+    role: UserRole;
+    adress: string;
+    orders: string[] | Order[];
 }
