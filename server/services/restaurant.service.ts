@@ -1,5 +1,5 @@
 import { Mongoose, Model } from "mongoose";
-import { Restaurant } from "../models";
+import { Restaurant, User } from "../models";
 import { getRestaurantSchema } from "./schema";
 
 export type CreateRestaurant = Omit<Restaurant, "_id">;
@@ -19,5 +19,13 @@ export class RestaurantService {
 
     async fetchRestaurants(): Promise<Restaurant[]> {
         return this.restoModel.find().populate("director").exec();
+    }
+
+    async findRestaurantById(id: string): Promise<Restaurant | null> {
+        return this.restoModel.findById(id).populate("director").exec();
+    }
+
+    async updateDirector(restaurantId: string, directorId: string): Promise<void> {
+        await this.restoModel.findByIdAndUpdate(restaurantId, { director: directorId });
     }
 }
