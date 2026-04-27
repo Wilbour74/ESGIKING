@@ -1,0 +1,9 @@
+services:
+  mongo:
+    image: mongo
+    restart: always
+    ports:
+      - 22223:27017
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: wilfried_bour
+      MONGO_INITDB_ROOT_PASSWORD: will
