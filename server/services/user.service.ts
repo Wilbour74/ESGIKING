@@ -5,7 +5,7 @@ import { sha256 } from "./utils";
 
 export type CreateUser = Omit<User, "_id">;
 
-export type UserCredentials = Pick<CreateUser, "nickname" | "password">;
+export type UserCredentials = Pick<CreateUser, "email" | "password">;
 
 export class UserService {
     readonly connection: Mongoose;
@@ -29,7 +29,7 @@ export class UserService {
 
     async findUsingCredentials(credentials: UserCredentials): Promise<User | null>  {
         return this.userModel.findOne({
-            nickname: credentials.nickname,
+            email: credentials.email,
             password: sha256(credentials.password)
         });
     }
