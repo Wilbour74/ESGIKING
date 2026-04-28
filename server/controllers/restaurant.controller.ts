@@ -20,13 +20,19 @@ export class RestaurantController{
         }
 
         const {city, products} = req.body;
-        const token = req.headers.authorization!
+        const token = req.headers.authorization!;
         const tokenWithoutBearer = token.replace(/^Bearer\s/, '');
         const session = await this.sessionService.getActiveSession(tokenWithoutBearer);
-        const director = session?.user!;
+        const user = session?.user!;
+
+        // Vérifie que seul un bigboss peut créer un restaurant
+        if (!user || typeof user === "string" || user.role !== 0) {
+            res.status(403).json({ message: "You are not authorized to create a restaurant" });
+            return;
+        }
 
         try{
-            const restaurant = await this.restaurantService.makeRestaurant({city, products, director})
+            const restaurant = await this.restaurantService.makeRestaurant({city, products, director: user});
             res.status(200).json({restaurant});
         } catch(error){
             res.status(500).json({message: "Error create restaurant"})
@@ -51,8 +57,8 @@ export class RestaurantController{
 
         const tokenWithoutBearer = token.replace(/^Bearer\s/, '');
         const session = await this.sessionService.getActiveSession(tokenWithoutBearer);
-        if (!session) {
-            res.status(401).json({ message: "Unauthorized" });
+        if (!session || typeof session.user === "string" || session.user.role !== 0) {
+            res.status(403).json({ message: "Seul un bigboss peut assigner un directeur" });
             return;
         }
 
