@@ -58,7 +58,7 @@ export class RestaurantController{
         const tokenWithoutBearer = token.replace(/^Bearer\s/, '');
         const session = await this.sessionService.getActiveSession(tokenWithoutBearer);
         if (!session || typeof session.user === "string" || session.user.role !== 0) {
-            res.status(403).json({ message: "Seul un bigboss peut assigner un directeur" });
+            res.status(403).json({ message: "You are not authorized to create a restaurant" });
             return;
         }
 
