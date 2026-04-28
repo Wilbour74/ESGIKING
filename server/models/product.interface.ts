@@ -1,8 +1,16 @@
 export enum ProductType {
-    sandwich = "sandwich",
-    fries = "fries",
-    drink = "drink",
-    menu = "menu"
+    burger = 'burger',
+    sandwich = 'sandwich',
+    wrap = 'wrap',
+    finger_food = 'finger_food',
+    drink = 'drink',
+}
+
+export enum ProductCategory {
+    main = 'main',
+    side = 'side',
+    dessert = 'dessert',
+    drink = 'drink',
 }
 
 export interface Product {
@@ -10,5 +18,5 @@ export interface Product {
     name: string;
     price: number;
     type: ProductType;
-    items?: Product[]
+    category: ProductCategory;
 }
