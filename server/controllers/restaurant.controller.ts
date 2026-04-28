@@ -14,7 +14,6 @@ export class RestaurantController{
     }
 
     async createRestaurant(req: Request, res: Response){
-        console.log("Oui")
         if(!req.body || typeof req.body.city !== "string") {
             res.status(400).json({message: "Invalide request body"});
             return;
