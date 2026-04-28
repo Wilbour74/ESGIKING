@@ -21,7 +21,7 @@ export class SessionService {
         if (!Types.ObjectId.isValid(token)) {
             return null;
         }
-        const session = await this.sessionModel.findById(token);
+        const session = await this.sessionModel.findById(token).populate("user").exec();
         if (!session) {
             return null;
         }

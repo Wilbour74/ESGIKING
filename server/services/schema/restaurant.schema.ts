@@ -1,5 +1,5 @@
 import { Schema } from "mongoose";
-import { Restaurant, User, Product } from "../../models";
+import { Restaurant } from "../../models";
 
 export function getRestaurantSchema(): Schema<Restaurant> {
     return new Schema({

@@ -95,6 +95,95 @@ export class RestaurantController{
         }
     }
 
+    async addProductToRestaurant(req: Request, res: Response) {
+        const token = req.headers.authorization;
+        if (!token) {
+            res.status(401).json({ message: "Unauthorized" });
+            return;
+        }
+
+        const tokenWithoutBearer = token.replace(/^Bearer\s/, '');
+        const session = await this.sessionService.getActiveSession(tokenWithoutBearer);
+        if (!session || typeof session.user === "string" || session.user.role !== 1) {
+            res.status(403).json({ message: "You are not authorized to add a product to a restaurant" });
+            return;
+        }
+
+        const restoId = typeof req.params.restoId === "string" ? req.params.restoId : undefined;
+        if (!restoId) {
+            res.status(400).json({ message: "Missing restaurant id" });
+            return;
+        }
+        
+        const restaurant = await this.restaurantService.findRestaurantById(restoId);
+        const director = restaurant?.director as User;
+
+        if(director._id.toString() !== session.user._id.toString()){
+            res.status(403).json({ message: "You are not the director of this restaurant" });
+            return;
+        }
+
+        try {
+            const {products} = req.body;
+            await this.restaurantService.affiliateProducts(restoId, products);
+            res.status(200).json({ message: "Product added successfully" });
+        } catch (error) {
+            res.status(500).json({ message: "Error adding product to restaurant", error: error instanceof Error ? error.message : String(error) });
+        }
+    }
+
+    async getRestaurantProducts(req: Request, res: Response) {
+        const restoId = typeof req.params.restoId === "string" ? req.params.restoId : undefined;
+        if (!restoId) {
+            res.status(400).json({ message: "Missing restaurant id" });
+            return;
+        }
+
+        try {
+            const products = await this.restaurantService.getProducts(restoId);
+            res.status(200).json({ products });
+        } catch (error) {
+            res.status(500).json({ message: "Error fetching restaurant products", error: error instanceof Error ? error.message : String(error) });
+        }
+    }
+
+    async deleteProductFromRestaurant(req: Request, res: Response) {
+        const token = req.headers.authorization;
+        if (!token) {
+            res.status(401).json({ message: "Unauthorized" });
+            return;
+        }
+
+        const tokenWithoutBearer = token.replace(/^Bearer\s/, '');
+        const session = await this.sessionService.getActiveSession(tokenWithoutBearer);
+        if (!session || typeof session.user === "string" || session.user.role !== 1) {
+            res.status(403).json({ message: "You are not authorized to delete a product from a restaurant" });
+            return;
+        }
+
+        const restoId = typeof req.params.restoId === "string" ? req.params.restoId : undefined;
+        if (!restoId) {
+            res.status(400).json({ message: "Missing restaurant id" });
+            return;
+        }
+        
+        const restaurant = await this.restaurantService.findRestaurantById(restoId);
+        const director = restaurant?.director as User;
+
+        if(director._id.toString() !== session.user._id.toString()){
+            res.status(403).json({ message: "You are not the director of this restaurant" });
+            return;
+        }
+
+        try {
+            const { products } = req.body;
+            await this.restaurantService.desaffiliateProducts(restoId, products);
+            res.status(200).json({ message: "Product deleted successfully" });
+        } catch (error) {
+            res.status(500).json({ message: "Error deleting product from restaurant", error: error instanceof Error ? error.message : String(error) });
+        }
+    }
+
 
     buildRouter(): Router {
         const router = Router();
@@ -102,6 +191,9 @@ export class RestaurantController{
         router.get("/all", json(), this.getRestaurants.bind(this));
         router.put("/assign-director/:restoId", json(), this.assignDirector.bind(this));
         router.get("/:id", json(), this.getRestaurantById.bind(this));
+        router.post("/add-product/:restoId", json(), this.addProductToRestaurant.bind(this));
+        router.get("/products/:restoId", json(), this.getRestaurantProducts.bind(this));
+        router.delete("/delete-product/:restoId", json(), this.deleteProductFromRestaurant.bind(this));
         return router;
     }
 }

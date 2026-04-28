@@ -1,6 +1,6 @@
 import { Mongoose, Model } from "mongoose";
-import { Restaurant, User } from "../models";
-import { getRestaurantSchema } from "./schema";
+import { Product, Restaurant, User } from "../models";
+import { getRestaurantSchema, getProductSchema } from "./schema";
 
 export type CreateRestaurant = Omit<Restaurant, "_id">;
 
@@ -10,6 +10,7 @@ export class RestaurantService {
 
     constructor(connection: Mongoose) {
         this.connection = connection;
+        this.connection.model("Product", getProductSchema());
         this.restoModel = this.connection.model("Restaurant", getRestaurantSchema());
     }
 
@@ -27,5 +28,21 @@ export class RestaurantService {
 
     async updateDirector(restaurantId: string, directorId: string): Promise<void> {
         await this.restoModel.findByIdAndUpdate(restaurantId, { director: directorId });
+    }
+
+    async affiliateProducts(restaurantId: string, products: string[]): Promise<void> {
+        await this.restoModel.findByIdAndUpdate(restaurantId, { $addToSet: { products: { $each: products } } });
+    }
+
+    async getProducts(restaurantId: string): Promise<Product[]> {
+        const restaurant = await this.restoModel.findById(restaurantId).populate("products").exec();
+        if (!restaurant) {
+            throw new Error("Restaurant not found");
+        }
+        return restaurant.products as Product[];
+    }
+
+    async desaffiliateProducts(restaurantId: string, products: string[]): Promise<void> {
+        await this.restoModel.findByIdAndUpdate(restaurantId, { $pull: { products: { $in: products } } });
     }
 }
