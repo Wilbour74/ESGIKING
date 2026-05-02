@@ -2,7 +2,8 @@ import { RestaurantService, SessionService, UserService } from "../services";
 import { Request, Response } from "express";
 import { Router } from "express";
 import { json } from "express";
-import { Session, User } from "../models";
+import { Session, User, UserRole } from "../models";
+import { userConnected, role, directorOnly } from "../middlewares";
 
 export class RestaurantController{
     readonly restaurantService: RestaurantService;
@@ -20,19 +21,9 @@ export class RestaurantController{
         }
 
         const {city, products} = req.body;
-        const token = req.headers.authorization!;
-        const tokenWithoutBearer = token.replace(/^Bearer\s/, '');
-        const session = await this.sessionService.getActiveSession(tokenWithoutBearer);
-        const user = session?.user!;
-
-        // Vérifie que seul un bigboss peut créer un restaurant
-        if (!user || typeof user === "string" || user.role !== 0) {
-            res.status(403).json({ message: "You are not authorized to create a restaurant" });
-            return;
-        }
 
         try{
-            const restaurant = await this.restaurantService.makeRestaurant({city, products, director: user});
+            const restaurant = await this.restaurantService.makeRestaurant({city, products});
             res.status(200).json({restaurant});
         } catch(error){
             res.status(500).json({message: "Error create restaurant"})
@@ -49,19 +40,6 @@ export class RestaurantController{
     }
 
     async assignDirector(req: Request, res: Response) {
-        const token = req.headers.authorization;
-        if (!token) {
-            res.status(401).json({ message: "Unauthorized" });
-            return;
-        }
-
-        const tokenWithoutBearer = token.replace(/^Bearer\s/, '');
-        const session = await this.sessionService.getActiveSession(tokenWithoutBearer);
-        if (!session || typeof session.user === "string" || session.user.role !== 0) {
-            res.status(403).json({ message: "You are not authorized to create a restaurant" });
-            return;
-        }
-
         const restoId = typeof req.params.restoId === "string" ? req.params.restoId : undefined;
         if (!restoId) {
             res.status(400).json({ message: "Missing restaurant id" });
@@ -96,16 +74,9 @@ export class RestaurantController{
     }
 
     async addProductToRestaurant(req: Request, res: Response) {
-        const token = req.headers.authorization;
-        if (!token) {
+        const user = req.user;
+        if (!user || typeof user === "string") {
             res.status(401).json({ message: "Unauthorized" });
-            return;
-        }
-
-        const tokenWithoutBearer = token.replace(/^Bearer\s/, '');
-        const session = await this.sessionService.getActiveSession(tokenWithoutBearer);
-        if (!session || typeof session.user === "string" || session.user.role !== 1) {
-            res.status(403).json({ message: "You are not authorized to add a product to a restaurant" });
             return;
         }
 
@@ -118,13 +89,18 @@ export class RestaurantController{
         const restaurant = await this.restaurantService.findRestaurantById(restoId);
         const director = restaurant?.director as User;
 
-        if(director._id.toString() !== session.user._id.toString()){
+        if(director._id.toString() !== user._id.toString()){
             res.status(403).json({ message: "You are not the director of this restaurant" });
             return;
         }
 
+        const {products} = req.body;
+        if(!products){
+            res.status(400).json({ message: "Invalid products format" });
+            return;
+        }
+
         try {
-            const {products} = req.body;
             await this.restaurantService.affiliateProducts(restoId, products);
             res.status(200).json({ message: "Product added successfully" });
         } catch (error) {
@@ -148,16 +124,9 @@ export class RestaurantController{
     }
 
     async deleteProductFromRestaurant(req: Request, res: Response) {
-        const token = req.headers.authorization;
-        if (!token) {
+        const user = req.user;
+        if (!user || typeof user === "string") {
             res.status(401).json({ message: "Unauthorized" });
-            return;
-        }
-
-        const tokenWithoutBearer = token.replace(/^Bearer\s/, '');
-        const session = await this.sessionService.getActiveSession(tokenWithoutBearer);
-        if (!session || typeof session.user === "string" || session.user.role !== 1) {
-            res.status(403).json({ message: "You are not authorized to delete a product from a restaurant" });
             return;
         }
 
@@ -170,7 +139,7 @@ export class RestaurantController{
         const restaurant = await this.restaurantService.findRestaurantById(restoId);
         const director = restaurant?.director as User;
 
-        if(director._id.toString() !== session.user._id.toString()){
+        if(director._id.toString() !== user._id.toString()){
             res.status(403).json({ message: "You are not the director of this restaurant" });
             return;
         }
@@ -187,13 +156,13 @@ export class RestaurantController{
 
     buildRouter(): Router {
         const router = Router();
-        router.post("/make", json(), this.createRestaurant.bind(this));
-        router.get("/all", json(), this.getRestaurants.bind(this));
-        router.put("/assign-director/:restoId", json(), this.assignDirector.bind(this));
+        router.post("/make", json(), userConnected(this.sessionService), role(UserRole.bigboss), this.createRestaurant.bind(this));
+        router.get("/all", userConnected(this.sessionService), this.getRestaurants.bind(this));
+        router.put("/assign-director/:restoId", json(), userConnected(this.sessionService), this.assignDirector.bind(this));
         router.get("/:id", json(), this.getRestaurantById.bind(this));
-        router.post("/add-product/:restoId", json(), this.addProductToRestaurant.bind(this));
+        router.post("/add-product/:restoId", json(), userConnected(this.sessionService), role(UserRole.admin), directorOnly(this.restaurantService), this.addProductToRestaurant.bind(this));
         router.get("/products/:restoId", json(), this.getRestaurantProducts.bind(this));
-        router.delete("/delete-product/:restoId", json(), this.deleteProductFromRestaurant.bind(this));
+        router.delete("/delete-product/:restoId", json(), userConnected(this.sessionService), role(UserRole.admin), directorOnly(this.restaurantService), this.deleteProductFromRestaurant.bind(this));
         return router;
     }
 }
