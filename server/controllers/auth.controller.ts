@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import { Router } from "express"; 
 import { json } from "express";
 import { UserRole } from "../models";
+import { userConnected, role } from "../middlewares";
 
 export class AuthController{
     readonly userService: UserService;
@@ -14,24 +15,23 @@ export class AuthController{
     }
 
     async me(req: Request, res: Response){
-        const token = req.headers.authorization;
-        console.log(req);
-        if(!token){
-            res.status(401).json({message: "Unauthorized"});
+        if (!req.user) {
+            res.status(401).json({ message: "Unauthorized" });
             return;
         }
-        try{
-            const tokenWithoutBearer = token.replace(/^Bearer\s/, '');
-            const session = await this.sessionService.getActiveSession(tokenWithoutBearer);
-            if(session){
-                const user = await this.userService.userModel.findById(session.user);
-                res.status(200).json({user});
-            }else{
-                res.status(401).json({message: "Unauthorized"});
+
+        try {
+            // req.user peut être un id ou un objet User selon le middleware
+            const userId = typeof req.user === "string" ? req.user : req.user._id;
+            const user = await this.userService.userModel.findById(userId);
+            if (user) {
+                res.status(200).json({ user });
+            } else {
+                res.status(404).json({ message: "User not found" });
             }
-        }catch(error){
-            res.status(500).json({message: "Error fetching user", error: error instanceof Error ? error.message : String(error)});
-        } 
+        } catch (error) {
+            res.status(500).json({ message: "Error fetching user", error: error instanceof Error ? error.message : String(error) });
+        }
     }
      
     async register(req: Request, res: Response){
@@ -40,6 +40,7 @@ export class AuthController{
             return;
         }
         const {nickname, password, email} = req.body;
+        
         try{
             const user = await this.userService.createUser({nickname, password, email, role: UserRole.customer});
             const session = await this.sessionService.createSession({user: user._id, expirationDate: new Date(Date.now() + 24 * 60 * 60 * 1000)});
@@ -50,17 +51,14 @@ export class AuthController{
     }
 
     async createDirector(req: Request, res: Response){
-        const token = req.headers.authorization;
-
-        if(!token){
+        if(!req.user || typeof req.user !== "string"){
             res.status(401).json({message: "Unauthorized"});
             return;
         }
+        
+        const user = await this.userService.userModel.findById(req.user);
 
-        const session = await this.sessionService.getActiveSession(token.replace(/^Bearer\s/, ''));
-        const user = await this.userService.userModel.findById(session?.user);
-
-        if(!session || !user || user.role !== UserRole.bigboss){
+        if(!user || user.role !== UserRole.bigboss){
             res.status(403).json({message: "Forbidden"});
             return;
         }
@@ -110,8 +108,8 @@ export class AuthController{
         const router = Router();
         router.post("/register", json(), this.register.bind(this));
         router.post("/login", json(), this.login.bind(this));
-        router.get("/me", json(), this.me.bind(this));
-        router.post("/create-director", json(), this.createDirector.bind(this));
+        router.get("/me", userConnected(this.sessionService), this.me.bind(this));
+        router.post("/create-director", userConnected(this.sessionService), role(UserRole.bigboss), this.createDirector.bind(this));
         return router;
     }
 }

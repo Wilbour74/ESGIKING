@@ -2,7 +2,7 @@ import { Mongoose, Model } from "mongoose";
 import { Product, Restaurant, User } from "../models";
 import { getRestaurantSchema, getProductSchema } from "./schema";
 
-export type CreateRestaurant = Omit<Restaurant, "_id">;
+export type CreateRestaurant = Omit<Restaurant, "_id" | "director"> & { director?: string | User };
 
 export class RestaurantService {
     readonly connection: Mongoose;
